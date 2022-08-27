@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fiber/api"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -69,6 +70,14 @@ func main() {
 			"calls":   out["count"],
 		})
 	})
+
+	routes := api.Api{
+		Mongo: db,
+	}
+	app.Get("/users", routes.GetUsers)
+	app.Post("/users", routes.PostUser)
+	app.Delete("/users/:id", routes.DeleteUser)
+	app.Put("/users/:id", routes.PutUser)
 
 	app.Listen("0.0.0.0" + getPort())
 }
