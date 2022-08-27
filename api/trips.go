@@ -16,8 +16,17 @@ type Trip struct {
 }
 
 func (api *Api) GetTrips(c *fiber.Ctx) error {
+	limitUser := c.Query("user")
+	filter := bson.M{}
+	if limitUser != "" {
+		uid, err := getId(c, limitUser)
+		if err != nil {
+			return err
+		}
+		filter["users"] = uid
+	}
 	res, err := api.Mongo.Database("triplan").
-		Collection("trips").Find(c.Context(), bson.M{})
+		Collection("trips").Find(c.Context(), filter)
 	if err != nil {
 		return err
 	}

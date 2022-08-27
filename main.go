@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -50,6 +51,7 @@ func main() {
 	}()
 
 	app := fiber.New()
+	app.Use(cors.New())
 	routes := api.Api{
 		Mongo: db,
 	}
