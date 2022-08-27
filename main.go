@@ -58,6 +58,7 @@ func main() {
 	app.Get("/", routes.HomeStats)
 	users := app.Group("/users")
 	users.Get("", routes.GetUsers)
+	users.Get("/:id", routes.GetUserInfo)
 	users.Post("", routes.PostUser)
 	users.Delete("/:id", routes.DeleteUser)
 	users.Put("/:id", routes.PutUser)

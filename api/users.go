@@ -14,8 +14,7 @@ type User struct {
 }
 
 func (api *Api) GetUsers(c *fiber.Ctx) error {
-	res, err := api.Mongo.Database("triplan").
-		Collection("users").Find(c.Context(), bson.M{})
+	res, err := api.Mongo.Database("triplan").Collection("users").Find(c.Context(), bson.M{})
 	if err != nil {
 		return err
 	}
@@ -27,6 +26,28 @@ func (api *Api) GetUsers(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(users)
+}
+
+func (api *Api) GetUserInfo(c *fiber.Ctx) error {
+	userId, err := getId(c, c.Params("id"))
+	if err != nil {
+		return err
+	}
+
+	res := api.Mongo.Database("triplan").Collection("users").FindOne(c.Context(), bson.M{
+		"_id": userId,
+	})
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	var user User
+	err = res.Decode(&user)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(user)
 }
 
 func (api *Api) PostUser(c *fiber.Ctx) error {
@@ -42,8 +63,7 @@ func (api *Api) PostUser(c *fiber.Ctx) error {
 	}
 	user.Id = primitive.NilObjectID
 
-	res, err := api.Mongo.Database("triplan").
-		Collection("users").InsertOne(c.Context(), user)
+	res, err := api.Mongo.Database("triplan").Collection("users").InsertOne(c.Context(), user)
 	if err != nil {
 		return err
 	}
@@ -58,8 +78,7 @@ func (api *Api) DeleteUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	_, err = api.Mongo.Database("triplan").
-		Collection("users").DeleteOne(c.Context(), bson.M{
+	_, err = api.Mongo.Database("triplan").Collection("users").DeleteOne(c.Context(), bson.M{
 		"_id": userId,
 	})
 
@@ -92,8 +111,7 @@ func (api *Api) PutUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	res, err := api.Mongo.Database("triplan").
-		Collection("users").ReplaceOne(c.Context(), bson.M{
+	res, err := api.Mongo.Database("triplan").Collection("users").ReplaceOne(c.Context(), bson.M{
 		"_id": user.Id,
 	}, user)
 	if err != nil {
