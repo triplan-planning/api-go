@@ -7,7 +7,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -49,35 +48,23 @@ func main() {
 			panic(err)
 		}
 	}()
-	collection := db.Database("stats").Collection("http_calls")
+
 	app := fiber.New()
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		res := collection.FindOneAndUpdate(c.Context(), bson.M{"_id": "/"}, bson.M{"$inc": bson.M{"count": 1}}, options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After))
-
-		if res.Err() != nil {
-			return c.JSON(fiber.Map{
-				"error": "😢 could not do it: " + res.Err().Error(),
-			})
-		}
-		out := map[string]any{}
-		err := res.Decode(&out)
-		if err != nil {
-			return err
-		}
-		return c.JSON(fiber.Map{
-			"message": "Wow, triplan !",
-			"calls":   out["count"],
-		})
-	})
-
 	routes := api.Api{
 		Mongo: db,
 	}
-	app.Get("/users", routes.GetUsers)
-	app.Post("/users", routes.PostUser)
-	app.Delete("/users/:id", routes.DeleteUser)
-	app.Put("/users/:id", routes.PutUser)
+	app.Get("/", routes.HomeStats)
+	users := app.Group("/users")
+	users.Get("", routes.GetUsers)
+	users.Post("", routes.PostUser)
+	users.Delete("/:id", routes.DeleteUser)
+	users.Put("/:id", routes.PutUser)
+
+	trips := app.Group("/trips")
+	trips.Get("", routes.GetTrips)
+	trips.Post("", routes.PostTrip)
+	trips.Delete("/:id", routes.DeleteTrip)
+	trips.Put("/:id", routes.PutTrip)
 
 	app.Listen("0.0.0.0" + getPort())
 }
