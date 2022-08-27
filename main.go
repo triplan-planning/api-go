@@ -65,6 +65,7 @@ func main() {
 
 	trips := app.Group("/trips")
 	trips.Get("", routes.GetTrips)
+	trips.Get("/:id", routes.GetTripInfo)
 	trips.Post("", routes.PostTrip)
 	trips.Delete("/:id", routes.DeleteTrip)
 	trips.Put("/:id", routes.PutTrip)

@@ -40,6 +40,28 @@ func (api *Api) GetTrips(c *fiber.Ctx) error {
 	return c.JSON(trips)
 }
 
+func (api *Api) GetTripInfo(c *fiber.Ctx) error {
+	tripId, err := getId(c, c.Params("id"))
+	if err != nil {
+		return err
+	}
+
+	res := api.Mongo.Database("triplan").Collection("trips").FindOne(c.Context(), bson.M{
+		"_id": tripId,
+	})
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	var trip Trip
+	err = res.Decode(&trip)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(trip)
+}
+
 func (api *Api) PostTrip(c *fiber.Ctx) error {
 	var trip Trip
 	err := c.BodyParser(&trip)
