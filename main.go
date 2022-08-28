@@ -70,5 +70,11 @@ func main() {
 	trips.Delete("/:id", routes.DeleteTrip)
 	trips.Put("/:id", routes.PutTrip)
 
+	trips.Get("/:id/spendings", routes.GetTripSpendings)
+	trips.Post("/:id/spendings", routes.PostTripSpending)
+	spendings := app.Group("/spendings")
+	spendings.Delete("/:id", routes.DeleteSpending)
+	spendings.Put("/:id", routes.PutSpending)
+
 	app.Listen("0.0.0.0" + getPort())
 }
