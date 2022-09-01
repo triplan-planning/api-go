@@ -76,8 +76,8 @@ func main() {
 	groups.Delete("/:id", routes.DeleteGroup)
 	groups.Put("/:id", routes.PutGroup)
 
-	groups.Get("/:id/transactions", routes.GetTripTransactions)
-	groups.Post("/:id/transactions", routes.PostTripTransaction)
+	groups.Get("/:id/transactions", routes.GetGroupTransactions)
+	groups.Post("/:id/transactions", routes.PostGroupTransaction)
 	transactions := app.Group("/transactions")
 	transactions.Delete("/:id", routes.DeleteTransaction)
 	transactions.Put("/:id", routes.PutTransaction)

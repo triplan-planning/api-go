@@ -10,13 +10,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// GetTripTransactions returns the spendings from a trip
 // @Summary      Returns all the spending from this trip
 // @Accept       json
-// @Param        id   path      string  true  "Trip ID"
-// @Success      200  {object}  Transaction
-// @Router       /trips/{id}/spendings [get]
-func (api *Api) GetTripTransactions(c *fiber.Ctx) error {
+// @Param        id   path      string  true  "Group ID"
+// @Success      200  {object}  model.Transaction
+// @Router       /trips/{id}/transactions [get]
+func (api *Api) GetGroupTransactions(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {
 		return err
@@ -35,14 +34,13 @@ func (api *Api) GetTripTransactions(c *fiber.Ctx) error {
 	return c.JSON(trips)
 }
 
-// PostTripTransaction creates a spending
-// @Summary      Creates a spending
+// @Summary      Creates a transaction
 // @Accept       json
-// @Param        id   path      string  true  "Trip ID"
-// @Param        spending  body      Transaction  true  "The spending to create"
-// @Success      200  {object}  Transaction
-// @Router       /trips/{id}/spendings [post]
-func (api *Api) PostTripTransaction(c *fiber.Ctx) error {
+// @Param        id   path      string  true  "Group ID"
+// @Param        transaction  body      model.Transaction  true  "The transaction to create"
+// @Success      200  {object}  model.Transaction
+// @Router       /groups/{id}/transactions [post]
+func (api *Api) PostGroupTransaction(c *fiber.Ctx) error {
 	var spending model.Transaction
 	err := c.BodyParser(&spending)
 	if err != nil {
@@ -57,7 +55,7 @@ func (api *Api) PostTripTransaction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(bson.M{"error": "invalid trip id"})
 	}
 
-	spending.Trip = tripId
+	spending.Group = tripId
 	if err := spending.Validate(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(bson.M{"error": err.Error()})
 	}
@@ -95,6 +93,10 @@ func (api *Api) PostTripTransaction(c *fiber.Ctx) error {
 	return c.JSON(spending)
 }
 
+// @Summary      Deletes a transaction
+// @Param        id   path      string  true  "Transaction ID"
+// @Success      200  {object}  model.Transaction
+// @Router       /transactions/{id} [delete]
 func (api *Api) DeleteTransaction(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {
@@ -113,6 +115,12 @@ func (api *Api) DeleteTransaction(c *fiber.Ctx) error {
 	return nil
 }
 
+// @Summary      Updates a transaction
+// @Accept       json
+// @Param        id   path      string  true  "Transaction ID"
+// @Param        transaction  body      model.Transaction  true  "The transaction to update"
+// @Success      200  {object}  model.Transaction
+// @Router       /transactions/{id} [put]
 func (api *Api) PutTransaction(c *fiber.Ctx) error {
 	spendingId, err := getId(c, c.Params("id"))
 	if err != nil {

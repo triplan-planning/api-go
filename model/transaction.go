@@ -15,7 +15,7 @@ type TransactionTarget struct {
 
 type Transaction struct {
 	Id       primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Trip     primitive.ObjectID   `json:"trip" bson:"trip"`
+	Group    primitive.ObjectID   `json:"group" bson:"group"`
 	PaidBy   primitive.ObjectID   `json:"paidBy" bson:"paidBy"`
 	PaidFor  []*TransactionTarget `json:"paidFor" bson:"paidFor"`
 	Amount   uint32               `json:"amount" bson:"amount"`
@@ -28,8 +28,8 @@ func (s *Transaction) Validate() (err error) {
 	if s.Amount == 0 {
 		return fmt.Errorf(`field "amount" must be non-zero`)
 	}
-	if s.Trip.IsZero() {
-		return fmt.Errorf(`field "trip" must be filled`)
+	if s.Group.IsZero() {
+		return fmt.Errorf(`field "group" must be filled`)
 	}
 	if s.PaidBy.IsZero() {
 		return fmt.Errorf(`field "paidBy" must be filled`)

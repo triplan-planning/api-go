@@ -1,5 +1,5 @@
 definitions:
-  api.Spending:
+  model.Transaction:
     properties:
       amount:
         type: integer
@@ -7,20 +7,20 @@ definitions:
         type: string
       date:
         type: string
+      group:
+        type: string
       id:
         type: string
       paidBy:
         type: string
       paidFor:
         items:
-          $ref: '#/definitions/api.SpendingPaidFor'
+          $ref: '#/definitions/model.TransactionTarget'
         type: array
       title:
         type: string
-      trip:
-        type: string
     type: object
-  api.SpendingPaidFor:
+  model.TransactionTarget:
     properties:
       forcePrice:
         type: integer
@@ -35,12 +35,32 @@ info:
   title: Triplan API
   version: "1.0"
 paths:
-  /trips/{id}/spendings:
-    get:
+  /groups/{id}/transactions:
+    post:
       consumes:
       - application/json
       parameters:
-      - description: Trip ID
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The transaction to create
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/model.Transaction'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Transaction'
+      summary: Creates a transaction
+  /transactions/{id}:
+    delete:
+      parameters:
+      - description: Transaction ID
         in: path
         name: id
         required: true
@@ -49,6 +69,43 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.Spending'
+            $ref: '#/definitions/model.Transaction'
+      summary: Deletes a transaction
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The transaction to update
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/model.Transaction'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Transaction'
+      summary: Updates a transaction
+  /trips/{id}/transactions:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Transaction'
       summary: Returns all the spending from this trip
 swagger: "2.0"

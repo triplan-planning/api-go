@@ -16,16 +16,79 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/trips/{id}/spendings": {
-            "get": {
+        "/groups/{id}/transactions": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
-                "summary": "Returns all the spending from this trip",
+                "summary": "Creates a transaction",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Trip ID",
+                        "description": "Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The transaction to create",
+                        "name": "transaction",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Transaction"
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions/{id}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Updates a transaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The transaction to update",
+                        "name": "transaction",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Transaction"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Deletes a transaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -35,7 +98,32 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.Spending"
+                            "$ref": "#/definitions/model.Transaction"
+                        }
+                    }
+                }
+            }
+        },
+        "/trips/{id}/transactions": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Returns all the spending from this trip",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Transaction"
                         }
                     }
                 }
@@ -43,7 +131,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "api.Spending": {
+        "model.Transaction": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -55,6 +143,9 @@ const docTemplate = `{
                 "date": {
                     "type": "string"
                 },
+                "group": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -64,18 +155,15 @@ const docTemplate = `{
                 "paidFor": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/api.SpendingPaidFor"
+                        "$ref": "#/definitions/model.TransactionTarget"
                     }
                 },
                 "title": {
                     "type": "string"
-                },
-                "trip": {
-                    "type": "string"
                 }
             }
         },
-        "api.SpendingPaidFor": {
+        "model.TransactionTarget": {
             "type": "object",
             "properties": {
                 "forcePrice": {
