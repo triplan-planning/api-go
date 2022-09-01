@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"fiber/api"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
+	"github.com/gofiber/swagger"
+	"github.com/triplan-planning/api-go/api"
+	_ "github.com/triplan-planning/api-go/docs"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -42,6 +44,10 @@ func getMongo() *mongo.Client {
 	return client
 }
 
+// @title           Triplan API
+// @version         1.0
+// @description     Triplan API POC
+// @license.name	Unlicense
 func main() {
 	db := getMongo()
 	defer func() {
@@ -56,6 +62,7 @@ func main() {
 		Mongo: db,
 	}
 	app.Get("/", routes.HomeStats)
+	app.Get("/doc/*", swagger.HandlerDefault)
 	users := app.Group("/users")
 	users.Get("", routes.GetUsers)
 	users.Get("/:id", routes.GetUserInfo)

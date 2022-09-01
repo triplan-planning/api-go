@@ -1,0 +1,54 @@
+definitions:
+  api.Spending:
+    properties:
+      amount:
+        type: integer
+      category:
+        type: string
+      date:
+        type: string
+      id:
+        type: string
+      paidBy:
+        type: string
+      paidFor:
+        items:
+          $ref: '#/definitions/api.SpendingPaidFor'
+        type: array
+      title:
+        type: string
+      trip:
+        type: string
+    type: object
+  api.SpendingPaidFor:
+    properties:
+      forcePrice:
+        type: integer
+      user:
+        type: string
+      weight:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: Triplan API POC
+  title: Triplan API
+  version: "1.0"
+paths:
+  /trips/{id}/spendings:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Trip ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.Spending'
+      summary: Returns all the spending from this trip
+swagger: "2.0"

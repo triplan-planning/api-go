@@ -13,7 +13,7 @@ import (
 type SpendingPaidFor struct {
 	User       primitive.ObjectID `json:"user" bson:"user"`
 	ForcePrice uint32             `json:"forcePrice,omitempty" bson:"forcePrice,omitempty"`
-	Weight     float32            `json:"weight,omitempty" bson:"weight,omitempty"`
+	Weight     uint32             `json:"weight,omitempty" bson:"weight,omitempty"`
 }
 
 type Spending struct {
@@ -50,6 +50,12 @@ func (s *Spending) Validate() (err error) {
 	return nil
 }
 
+// GetTripSpendings returns the spendings from a trip
+// @Summary      Returns all the spending from this trip
+// @Accept       json
+// @Param        id   path      string  true  "Trip ID"
+// @Success      200  {object}  Spending
+// @Router       /trips/{id}/spendings [get]
 func (api *Api) GetTripSpendings(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {

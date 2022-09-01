@@ -1,0 +1,84 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Triplan API POC",
+        "title": "Triplan API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "paths": {
+        "/trips/{id}/spendings": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Returns all the spending from this trip",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Trip ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.Spending"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "api.Spending": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "paidBy": {
+                    "type": "string"
+                },
+                "paidFor": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.SpendingPaidFor"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "trip": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.SpendingPaidFor": {
+            "type": "object",
+            "properties": {
+                "forcePrice": {
+                    "type": "integer"
+                },
+                "user": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
