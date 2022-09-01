@@ -55,7 +55,7 @@ func (api *Api) GetTripSpendings(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	res, err := api.Mongo.Database("triplan").Collection("spendings").Find(c.Context(), bson.M{"trip": tripId}, options.Find().SetSort(bson.M{"_id": "desc"}))
+	res, err := api.Mongo.Database("triplan").Collection("spendings").Find(c.Context(), bson.M{"trip": tripId}, options.Find().SetSort(bson.M{"_id": -1}))
 	if err != nil {
 		return err
 	}
@@ -89,13 +89,18 @@ func (api *Api) PostTripSpending(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(bson.M{"error": err.Error()})
 	}
 
-	users := []primitive.ObjectID{spending.PaidBy}
+	users := map[primitive.ObjectID]bool{spending.PaidBy: true}
 	for _, paidFor := range spending.PaidFor {
-		users = append(users, paidFor.User)
+		users[paidFor.User] = true
+	}
+
+	userIds := []primitive.ObjectID{}
+	for id := range users {
+		userIds = append(userIds, id)
 	}
 
 	cnt, err := api.Mongo.Database("triplan").Collection("users").CountDocuments(c.Context(), bson.M{
-		"_id": bson.M{"$in": users},
+		"_id": bson.M{"$in": userIds},
 	})
 	if err != nil {
 		return err
