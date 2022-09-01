@@ -2,71 +2,31 @@ package api
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/triplan-planning/api-go/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type SpendingPaidFor struct {
-	User       primitive.ObjectID `json:"user" bson:"user"`
-	ForcePrice uint32             `json:"forcePrice,omitempty" bson:"forcePrice,omitempty"`
-	Weight     uint32             `json:"weight,omitempty" bson:"weight,omitempty"`
-}
-
-type Spending struct {
-	Id       primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Trip     primitive.ObjectID `json:"trip" bson:"trip"`
-	PaidBy   primitive.ObjectID `json:"paidBy" bson:"paidBy"`
-	PaidFor  []*SpendingPaidFor `json:"paidFor" bson:"paidFor"`
-	Amount   uint32             `json:"amount" bson:"amount"`
-	Date     time.Time          `json:"date" bson:"date"`
-	Category string             `json:"category" bson:"category"`
-	Title    string             `json:"title,omitempty" bson:"title,omitempty"`
-}
-
-func (s *Spending) Validate() (err error) {
-	if s.Amount == 0 {
-		return fmt.Errorf(`field "amount" must be non-zero`)
-	}
-	if s.Trip.IsZero() {
-		return fmt.Errorf(`field "trip" must be filled`)
-	}
-	if s.PaidBy.IsZero() {
-		return fmt.Errorf(`field "paidBy" must be filled`)
-	}
-	if len(s.PaidFor) == 0 {
-		return fmt.Errorf(`field "paidFor" must have some values`)
-	}
-	if s.Date.IsZero() {
-		return fmt.Errorf(`field "date" must have be filled`)
-	}
-	if s.Category == "" {
-		return fmt.Errorf(`field "category" must have be filled`)
-	}
-
-	return nil
-}
-
-// GetTripSpendings returns the spendings from a trip
+// GetTripTransactions returns the spendings from a trip
 // @Summary      Returns all the spending from this trip
 // @Accept       json
 // @Param        id   path      string  true  "Trip ID"
-// @Success      200  {object}  Spending
+// @Success      200  {object}  Transaction
 // @Router       /trips/{id}/spendings [get]
-func (api *Api) GetTripSpendings(c *fiber.Ctx) error {
+func (api *Api) GetTripTransactions(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {
 		return err
 	}
-	res, err := api.Mongo.Database("triplan").Collection("spendings").Find(c.Context(), bson.M{"trip": tripId}, options.Find().SetSort(bson.M{"_id": -1}))
+	res, err := api.transactionsColl.Find(c.Context(), bson.M{"trip": tripId}, options.Find().SetSort(bson.M{"_id": -1}))
 	if err != nil {
 		return err
 	}
 
-	var trips []Spending
+	var trips []model.Transaction
 	err = res.All(c.Context(), &trips)
 	if err != nil {
 		return err
@@ -75,8 +35,15 @@ func (api *Api) GetTripSpendings(c *fiber.Ctx) error {
 	return c.JSON(trips)
 }
 
-func (api *Api) PostTripSpending(c *fiber.Ctx) error {
-	var spending Spending
+// PostTripTransaction creates a spending
+// @Summary      Creates a spending
+// @Accept       json
+// @Param        id   path      string  true  "Trip ID"
+// @Param        spending  body      Transaction  true  "The spending to create"
+// @Success      200  {object}  Transaction
+// @Router       /trips/{id}/spendings [post]
+func (api *Api) PostTripTransaction(c *fiber.Ctx) error {
+	var spending model.Transaction
 	err := c.BodyParser(&spending)
 	if err != nil {
 		return err
@@ -85,7 +52,7 @@ func (api *Api) PostTripSpending(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	tripRes := api.Mongo.Database("triplan").Collection("trips").FindOne(c.Context(), bson.M{"_id": tripId})
+	tripRes := api.groupsColl.FindOne(c.Context(), bson.M{"_id": tripId})
 	if tripRes.Err() != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(bson.M{"error": "invalid trip id"})
 	}
@@ -105,7 +72,7 @@ func (api *Api) PostTripSpending(c *fiber.Ctx) error {
 		userIds = append(userIds, id)
 	}
 
-	cnt, err := api.Mongo.Database("triplan").Collection("users").CountDocuments(c.Context(), bson.M{
+	cnt, err := api.usersColl.CountDocuments(c.Context(), bson.M{
 		"_id": bson.M{"$in": userIds},
 	})
 	if err != nil {
@@ -119,7 +86,7 @@ func (api *Api) PostTripSpending(c *fiber.Ctx) error {
 
 	spending.Id = primitive.NilObjectID
 
-	res, err := api.Mongo.Database("triplan").Collection("spendings").InsertOne(c.Context(), spending)
+	res, err := api.transactionsColl.InsertOne(c.Context(), spending)
 	if err != nil {
 		return err
 	}
@@ -128,13 +95,13 @@ func (api *Api) PostTripSpending(c *fiber.Ctx) error {
 	return c.JSON(spending)
 }
 
-func (api *Api) DeleteSpending(c *fiber.Ctx) error {
+func (api *Api) DeleteTransaction(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {
 		return err
 	}
 
-	_, err = api.Mongo.Database("triplan").Collection("spendings").DeleteOne(c.Context(), bson.M{
+	_, err = api.transactionsColl.DeleteOne(c.Context(), bson.M{
 		"_id": tripId,
 	})
 
@@ -146,13 +113,13 @@ func (api *Api) DeleteSpending(c *fiber.Ctx) error {
 	return nil
 }
 
-func (api *Api) PutSpending(c *fiber.Ctx) error {
+func (api *Api) PutTransaction(c *fiber.Ctx) error {
 	spendingId, err := getId(c, c.Params("id"))
 	if err != nil {
 		return err
 	}
 
-	var spending Spending
+	var spending model.Transaction
 	err = c.BodyParser(&spending)
 	if err != nil {
 		return err
@@ -166,7 +133,7 @@ func (api *Api) PutSpending(c *fiber.Ctx) error {
 		users = append(users, paidFor.User)
 	}
 
-	cnt, err := api.Mongo.Database("triplan").Collection("users").CountDocuments(c.Context(), bson.M{
+	cnt, err := api.usersColl.CountDocuments(c.Context(), bson.M{
 		"_id": bson.M{"$in": users},
 	})
 	if err != nil {
@@ -183,7 +150,7 @@ func (api *Api) PutSpending(c *fiber.Ctx) error {
 		return err
 	}
 
-	res, err := api.Mongo.Database("triplan").Collection("spendings").ReplaceOne(c.Context(), bson.M{"_id": spending.Id}, spending)
+	res, err := api.transactionsColl.ReplaceOne(c.Context(), bson.M{"_id": spending.Id}, spending)
 	if err != nil {
 		return err
 	}

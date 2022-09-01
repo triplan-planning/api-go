@@ -4,18 +4,12 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/triplan-planning/api-go/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Trip struct {
-	Id          primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Name        string               `json:"name,omitempty" bson:"name,omitempty"`
-	Description string               `json:"description,omitempty" bson:"description,omitempty"`
-	Users       []primitive.ObjectID `json:"users,omitempty" bson:"users,omitempty"`
-}
-
-func (api *Api) GetTrips(c *fiber.Ctx) error {
+func (api *Api) GetGroups(c *fiber.Ctx) error {
 	limitUser := c.Query("user")
 	filter := bson.M{}
 	if limitUser != "" {
@@ -25,13 +19,12 @@ func (api *Api) GetTrips(c *fiber.Ctx) error {
 		}
 		filter["users"] = uid
 	}
-	res, err := api.Mongo.Database("triplan").
-		Collection("trips").Find(c.Context(), filter)
+	res, err := api.groupsColl.Find(c.Context(), filter)
 	if err != nil {
 		return err
 	}
 
-	var trips []Trip
+	var trips []model.Group
 	err = res.All(c.Context(), &trips)
 	if err != nil {
 		return err
@@ -40,20 +33,20 @@ func (api *Api) GetTrips(c *fiber.Ctx) error {
 	return c.JSON(trips)
 }
 
-func (api *Api) GetTripInfo(c *fiber.Ctx) error {
+func (api *Api) GetGroupInfo(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {
 		return err
 	}
 
-	res := api.Mongo.Database("triplan").Collection("trips").FindOne(c.Context(), bson.M{
+	res := api.groupsColl.FindOne(c.Context(), bson.M{
 		"_id": tripId,
 	})
 	if res.Err() != nil {
 		return res.Err()
 	}
 
-	var trip Trip
+	var trip model.Group
 	err = res.Decode(&trip)
 	if err != nil {
 		return err
@@ -62,8 +55,8 @@ func (api *Api) GetTripInfo(c *fiber.Ctx) error {
 	return c.JSON(trip)
 }
 
-func (api *Api) PostTrip(c *fiber.Ctx) error {
-	var trip Trip
+func (api *Api) PostGroup(c *fiber.Ctx) error {
+	var trip model.Group
 	err := c.BodyParser(&trip)
 	if err != nil {
 		return err
@@ -78,7 +71,7 @@ func (api *Api) PostTrip(c *fiber.Ctx) error {
 			"error": `field "users" must be non-empty`,
 		})
 	}
-	cnt, err := api.Mongo.Database("triplan").Collection("users").CountDocuments(c.Context(), bson.M{
+	cnt, err := api.usersColl.CountDocuments(c.Context(), bson.M{
 		"_id": bson.M{"$in": trip.Users},
 	})
 	if err != nil {
@@ -92,7 +85,7 @@ func (api *Api) PostTrip(c *fiber.Ctx) error {
 
 	trip.Id = primitive.NilObjectID
 
-	res, err := api.Mongo.Database("triplan").Collection("trips").InsertOne(c.Context(), trip)
+	res, err := api.groupsColl.InsertOne(c.Context(), trip)
 	if err != nil {
 		return err
 	}
@@ -101,14 +94,13 @@ func (api *Api) PostTrip(c *fiber.Ctx) error {
 	return c.JSON(trip)
 }
 
-func (api *Api) DeleteTrip(c *fiber.Ctx) error {
+func (api *Api) DeleteGroup(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {
 		return err
 	}
 
-	_, err = api.Mongo.Database("triplan").
-		Collection("trips").DeleteOne(c.Context(), bson.M{
+	_, err = api.groupsColl.DeleteOne(c.Context(), bson.M{
 		"_id": tripId,
 	})
 
@@ -120,13 +112,13 @@ func (api *Api) DeleteTrip(c *fiber.Ctx) error {
 	return nil
 }
 
-func (api *Api) PutTrip(c *fiber.Ctx) error {
+func (api *Api) PutGroup(c *fiber.Ctx) error {
 	tripId, err := getId(c, c.Params("id"))
 	if err != nil {
 		return err
 	}
 
-	var trip Trip
+	var trip model.Group
 	err = c.BodyParser(&trip)
 	if err != nil {
 		return err
@@ -141,7 +133,7 @@ func (api *Api) PutTrip(c *fiber.Ctx) error {
 			"error": `field "users" must be non-empty`,
 		})
 	}
-	cnt, err := api.Mongo.Database("triplan").Collection("users").CountDocuments(c.Context(), bson.M{
+	cnt, err := api.usersColl.CountDocuments(c.Context(), bson.M{
 		"_id": bson.M{"$in": trip.Users},
 	})
 	if err != nil {
@@ -158,8 +150,7 @@ func (api *Api) PutTrip(c *fiber.Ctx) error {
 		return err
 	}
 
-	res, err := api.Mongo.Database("triplan").
-		Collection("trips").ReplaceOne(c.Context(), bson.M{
+	res, err := api.groupsColl.ReplaceOne(c.Context(), bson.M{
 		"_id": trip.Id,
 	}, trip)
 	if err != nil {

@@ -4,22 +4,18 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/triplan-planning/api-go/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type User struct {
-	Id   primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Name string             `json:"name" bson:"name,omitempty"`
-}
-
 func (api *Api) GetUsers(c *fiber.Ctx) error {
-	res, err := api.Mongo.Database("triplan").Collection("users").Find(c.Context(), bson.M{})
+	res, err := api.usersColl.Find(c.Context(), bson.M{})
 	if err != nil {
 		return err
 	}
 
-	var users []User
+	var users []model.User
 	err = res.All(c.Context(), &users)
 	if err != nil {
 		return err
@@ -34,14 +30,14 @@ func (api *Api) GetUserInfo(c *fiber.Ctx) error {
 		return err
 	}
 
-	res := api.Mongo.Database("triplan").Collection("users").FindOne(c.Context(), bson.M{
+	res := api.usersColl.FindOne(c.Context(), bson.M{
 		"_id": userId,
 	})
 	if res.Err() != nil {
 		return res.Err()
 	}
 
-	var user User
+	var user model.User
 	err = res.Decode(&user)
 	if err != nil {
 		return err
@@ -51,7 +47,7 @@ func (api *Api) GetUserInfo(c *fiber.Ctx) error {
 }
 
 func (api *Api) PostUser(c *fiber.Ctx) error {
-	var user User
+	var user model.User
 	err := c.BodyParser(&user)
 	if err != nil {
 		return err
@@ -63,7 +59,7 @@ func (api *Api) PostUser(c *fiber.Ctx) error {
 	}
 	user.Id = primitive.NilObjectID
 
-	res, err := api.Mongo.Database("triplan").Collection("users").InsertOne(c.Context(), user)
+	res, err := api.usersColl.InsertOne(c.Context(), user)
 	if err != nil {
 		return err
 	}
@@ -78,7 +74,7 @@ func (api *Api) DeleteUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	_, err = api.Mongo.Database("triplan").Collection("users").DeleteOne(c.Context(), bson.M{
+	_, err = api.usersColl.DeleteOne(c.Context(), bson.M{
 		"_id": userId,
 	})
 
@@ -96,7 +92,7 @@ func (api *Api) PutUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	var user User
+	var user model.User
 	err = c.BodyParser(&user)
 	if err != nil {
 		return err
@@ -111,7 +107,7 @@ func (api *Api) PutUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	res, err := api.Mongo.Database("triplan").Collection("users").ReplaceOne(c.Context(), bson.M{
+	res, err := api.usersColl.ReplaceOne(c.Context(), bson.M{
 		"_id": user.Id,
 	}, user)
 	if err != nil {

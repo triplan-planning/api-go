@@ -55,12 +55,11 @@ func main() {
 			panic(err)
 		}
 	}()
+	routes := api.New(db)
 
 	app := fiber.New()
 	app.Use(cors.New())
-	routes := api.Api{
-		Mongo: db,
-	}
+
 	app.Get("/", routes.HomeStats)
 	app.Get("/doc/*", swagger.HandlerDefault)
 	users := app.Group("/users")
@@ -70,18 +69,18 @@ func main() {
 	users.Delete("/:id", routes.DeleteUser)
 	users.Put("/:id", routes.PutUser)
 
-	trips := app.Group("/trips")
-	trips.Get("", routes.GetTrips)
-	trips.Get("/:id", routes.GetTripInfo)
-	trips.Post("", routes.PostTrip)
-	trips.Delete("/:id", routes.DeleteTrip)
-	trips.Put("/:id", routes.PutTrip)
+	groups := app.Group("/groups")
+	groups.Get("", routes.GetGroups)
+	groups.Get("/:id", routes.GetGroupInfo)
+	groups.Post("", routes.PostGroup)
+	groups.Delete("/:id", routes.DeleteGroup)
+	groups.Put("/:id", routes.PutGroup)
 
-	trips.Get("/:id/spendings", routes.GetTripSpendings)
-	trips.Post("/:id/spendings", routes.PostTripSpending)
-	spendings := app.Group("/spendings")
-	spendings.Delete("/:id", routes.DeleteSpending)
-	spendings.Put("/:id", routes.PutSpending)
+	groups.Get("/:id/transactions", routes.GetTripTransactions)
+	groups.Post("/:id/transactions", routes.PostTripTransaction)
+	transactions := app.Group("/transactions")
+	transactions.Delete("/:id", routes.DeleteTransaction)
+	transactions.Put("/:id", routes.PutTransaction)
 
 	app.Listen("0.0.0.0" + getPort())
 }

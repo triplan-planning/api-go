@@ -10,8 +10,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+func New(db *mongo.Client) *Api {
+	return &Api{
+		Mongo:            db,
+		groupsColl:       db.Database("triplan").Collection("groups"),
+		usersColl:        db.Database("triplan").Collection("users"),
+		transactionsColl: db.Database("triplan").Collection("transactions"),
+	}
+}
+
 type Api struct {
-	Mongo *mongo.Client
+	Mongo            *mongo.Client
+	groupsColl       *mongo.Collection
+	usersColl        *mongo.Collection
+	transactionsColl *mongo.Collection
 }
 
 func getId(c *fiber.Ctx, idstring string) (primitive.ObjectID, error) {
