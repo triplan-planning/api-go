@@ -14,24 +14,24 @@ import (
 // @Accept       json
 // @Param        id   path      string  true  "Group ID"
 // @Success      200  {object}  model.Transaction
-// @Router       /trips/{id}/transactions [get]
+// @Router       /groups/{id}/transactions [get]
 func (api *Api) GetGroupTransactions(c *fiber.Ctx) error {
-	tripId, err := getId(c, c.Params("id"))
+	tripId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
-	res, err := api.transactionsColl.Find(c.Context(), bson.M{"trip": tripId}, options.Find().SetSort(bson.M{"_id": -1}))
-	if err != nil {
-		return err
-	}
-
-	var trips []model.Transaction
-	err = res.All(c.Context(), &trips)
+	res, err := api.transactionsColl.Find(c.Context(), model.Transaction{Group: tripId}, options.Find().SetSort(bson.M{"_id": -1}))
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(trips)
+	var transactions []model.Transaction
+	err = res.All(c.Context(), &transactions)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(transactions)
 }
 
 // @Summary      Creates a transaction
@@ -41,64 +41,58 @@ func (api *Api) GetGroupTransactions(c *fiber.Ctx) error {
 // @Success      200  {object}  model.Transaction
 // @Router       /groups/{id}/transactions [post]
 func (api *Api) PostGroupTransaction(c *fiber.Ctx) error {
-	var spending model.Transaction
-	err := c.BodyParser(&spending)
+	var transaction model.Transaction
+	err := c.BodyParser(&transaction)
 	if err != nil {
 		return err
 	}
-	tripId, err := getId(c, c.Params("id"))
+	tripId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
 	tripRes := api.groupsColl.FindOne(c.Context(), bson.M{"_id": tripId})
 	if tripRes.Err() != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(bson.M{"error": "invalid trip id"})
+		return fiber.NewError(fiber.StatusBadRequest, "invalid trip id")
 	}
 
-	spending.Group = tripId
-	if err := spending.Validate(); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(bson.M{"error": err.Error()})
+	transaction.Group = tripId
+	if err := transaction.Validate(); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	users := map[primitive.ObjectID]bool{spending.PaidBy: true}
-	for _, paidFor := range spending.PaidFor {
-		users[paidFor.User] = true
-	}
-
-	userIds := []primitive.ObjectID{}
-	for id := range users {
-		userIds = append(userIds, id)
-	}
+	users := transaction.Users()
 
 	cnt, err := api.usersColl.CountDocuments(c.Context(), bson.M{
-		"_id": bson.M{"$in": userIds},
+		"_id": bson.M{"$in": users},
 	})
 	if err != nil {
 		return err
 	}
 	if cnt != int64(len(users)) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf(`field "users" must be a list of valid users: got %d valid users out of %d`, cnt, len(users)),
-		})
+		return fmt.Errorf(` %w: field "users" must be a list of valid users: got %d valid users out of %d`, fiber.ErrBadRequest, cnt, len(users))
 	}
 
-	spending.Id = primitive.NilObjectID
-
-	res, err := api.transactionsColl.InsertOne(c.Context(), spending)
+	transaction.Id = primitive.NilObjectID
+	err = transaction.ComputePrices()
 	if err != nil {
 		return err
 	}
-	spending.Id = res.InsertedID.(primitive.ObjectID)
 
-	return c.JSON(spending)
+	res, err := api.transactionsColl.InsertOne(c.Context(), transaction)
+	if err != nil {
+		return err
+	}
+	transaction.Id = res.InsertedID.(primitive.ObjectID)
+
+	return c.JSON(transaction)
 }
 
 // @Summary      Deletes a transaction
 // @Param        id   path      string  true  "Transaction ID"
-// @Success      200  {object}  model.Transaction
+// @Success      204
 // @Router       /transactions/{id} [delete]
 func (api *Api) DeleteTransaction(c *fiber.Ctx) error {
-	tripId, err := getId(c, c.Params("id"))
+	tripId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -122,24 +116,21 @@ func (api *Api) DeleteTransaction(c *fiber.Ctx) error {
 // @Success      200  {object}  model.Transaction
 // @Router       /transactions/{id} [put]
 func (api *Api) PutTransaction(c *fiber.Ctx) error {
-	spendingId, err := getId(c, c.Params("id"))
+	spendingId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
 
-	var spending model.Transaction
-	err = c.BodyParser(&spending)
+	var transaction model.Transaction
+	err = c.BodyParser(&transaction)
 	if err != nil {
 		return err
 	}
-	if err := spending.Validate(); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(bson.M{"error": err.Error()})
+	if err := transaction.Validate(); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	users := []primitive.ObjectID{spending.PaidBy}
-	for _, paidFor := range spending.PaidFor {
-		users = append(users, paidFor.User)
-	}
+	users := transaction.Users()
 
 	cnt, err := api.usersColl.CountDocuments(c.Context(), bson.M{
 		"_id": bson.M{"$in": users},
@@ -148,17 +139,20 @@ func (api *Api) PutTransaction(c *fiber.Ctx) error {
 		return err
 	}
 	if cnt != int64(len(users)) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf(`field "users" must be a list of valid users: got %d valid users out of %d`, cnt, len(users)),
-		})
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf(`field "users" must be a list of valid users: got %d valid users out of %d`, cnt, len(users)))
 	}
 
-	spending.Id = spendingId
+	transaction.Id = spendingId
 	if err != nil {
 		return err
 	}
 
-	res, err := api.transactionsColl.ReplaceOne(c.Context(), bson.M{"_id": spending.Id}, spending)
+	err = transaction.ComputePrices()
+	if err != nil {
+		return err
+	}
+
+	res, err := api.transactionsColl.ReplaceOne(c.Context(), bson.M{"_id": transaction.Id}, transaction)
 	if err != nil {
 		return err
 	}
@@ -166,5 +160,5 @@ func (api *Api) PutTransaction(c *fiber.Ctx) error {
 		return fmt.Errorf("could not update spending")
 	}
 
-	return c.JSON(spending)
+	return c.JSON(transaction)
 }

@@ -25,7 +25,7 @@ func (api *Api) GetUsers(c *fiber.Ctx) error {
 }
 
 func (api *Api) GetUserInfo(c *fiber.Ctx) error {
-	userId, err := getId(c, c.Params("id"))
+	userId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -53,9 +53,7 @@ func (api *Api) PostUser(c *fiber.Ctx) error {
 		return err
 	}
 	if user.Name == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": `field "name" must be non-empty`,
-		})
+		return fiber.NewError(fiber.StatusBadRequest, `field "name" must be non-empty`)
 	}
 	user.Id = primitive.NilObjectID
 
@@ -69,7 +67,7 @@ func (api *Api) PostUser(c *fiber.Ctx) error {
 }
 
 func (api *Api) DeleteUser(c *fiber.Ctx) error {
-	userId, err := getId(c, c.Params("id"))
+	userId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -87,7 +85,7 @@ func (api *Api) DeleteUser(c *fiber.Ctx) error {
 }
 
 func (api *Api) PutUser(c *fiber.Ctx) error {
-	userId, err := getId(c, c.Params("id"))
+	userId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -98,9 +96,7 @@ func (api *Api) PutUser(c *fiber.Ctx) error {
 		return err
 	}
 	if user.Name == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": `field "name" must be non-empty`,
-		})
+		return fiber.NewError(fiber.StatusBadRequest, `field "name" must be non-empty`)
 	}
 	user.Id = userId
 	if err != nil {

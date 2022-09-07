@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -57,7 +58,17 @@ func main() {
 	}()
 	routes := api.New(db)
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			var e *fiber.Error
+			if errors.As(err, &e) {
+				code = e.Code
+			}
+			ctx.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSONCharsetUTF8)
+			return ctx.Status(code).JSON(fiber.Map{"error": err.Error()})
+		},
+	})
 	app.Use(cors.New())
 
 	app.Get("/", routes.HomeStats)

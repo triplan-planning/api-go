@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -8,19 +9,20 @@ import (
 )
 
 type TransactionTarget struct {
-	User       primitive.ObjectID `json:"user" bson:"user"`
-	ForcePrice uint32             `json:"forcePrice,omitempty" bson:"forcePrice,omitempty"`
-	Weight     uint32             `json:"weight,omitempty" bson:"weight,omitempty"`
+	User          primitive.ObjectID `json:"user" bson:"user"`
+	ForcePrice    uint32             `json:"forcePrice,omitempty" bson:"forcePrice,omitempty"`
+	Weight        uint32             `json:"weight,omitempty" bson:"weight,omitempty"`
+	ComputedPrice uint32             `json:"computedPrice,omitempty" bson:"computedPrice,omitempty"`
 }
 
 type Transaction struct {
 	Id       primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Group    primitive.ObjectID   `json:"group" bson:"group"`
-	PaidBy   primitive.ObjectID   `json:"paidBy" bson:"paidBy"`
-	PaidFor  []*TransactionTarget `json:"paidFor" bson:"paidFor"`
-	Amount   uint32               `json:"amount" bson:"amount"`
-	Date     time.Time            `json:"date" bson:"date"`
-	Category string               `json:"category" bson:"category"`
+	Group    primitive.ObjectID   `json:"group" bson:"group,omitempty"`
+	PaidBy   primitive.ObjectID   `json:"paidBy" bson:"paidBy,omitempty"`
+	PaidFor  []*TransactionTarget `json:"paidFor" bson:"paidFor,omitempty"`
+	Amount   uint32               `json:"amount" bson:"amount,omitempty"`
+	Date     time.Time            `json:"date" bson:"date,omitempty"`
+	Category string               `json:"category" bson:"category,omitempty"`
 	Title    string               `json:"title,omitempty" bson:"title,omitempty"`
 }
 
@@ -42,6 +44,61 @@ func (s *Transaction) Validate() (err error) {
 	}
 	if s.Category == "" {
 		return fmt.Errorf(`field "category" must have be filled`)
+	}
+
+	return nil
+}
+
+func (s *Transaction) Users() []primitive.ObjectID {
+	users := map[primitive.ObjectID]bool{s.PaidBy: true}
+	for _, paidFor := range s.PaidFor {
+		users[paidFor.User] = true
+	}
+
+	userIds := []primitive.ObjectID{}
+	for id := range users {
+		userIds = append(userIds, id)
+	}
+
+	return userIds
+}
+
+func (s *Transaction) ComputePrices() (err error) {
+	rest := s.Amount
+	totalWeights := uint32(0)
+	for _, t := range s.PaidFor {
+		if t.ForcePrice > rest {
+			return errors.New("force prices are higher than the trasaction amount, please fix")
+		}
+		rest -= t.ForcePrice
+		totalWeights += t.Weight
+	}
+	if rest == 0 {
+		return nil
+	}
+
+	toSplit := rest
+
+	for _, t := range s.PaidFor {
+		t.ComputedPrice = 0
+		if t.ForcePrice != 0 {
+			t.ComputedPrice = t.ForcePrice
+		}
+		if t.Weight != 0 {
+			part := toSplit * t.Weight / totalWeights
+			t.ComputedPrice += part
+			rest -= part
+		}
+	}
+	if rest > 0 {
+		for _, t := range s.PaidFor {
+			t.ComputedPrice += 1
+			rest -= 1
+		}
+	}
+
+	if rest > 0 {
+		return errors.New("computations are fucked up")
 	}
 
 	return nil
