@@ -55,6 +55,42 @@ func (api *Api) GetGroupInfo(c *fiber.Ctx) error {
 	return c.JSON(trip)
 }
 
+func (api *Api) GetUsersFromGroup(c *fiber.Ctx) error {
+	tripId, err := getId(c.Params("id"))
+	if err != nil {
+		return err
+	}
+
+	res := api.groupsColl.FindOne(c.Context(), bson.M{
+		"_id": tripId,
+	})
+	if res.Err() != nil {
+		return res.Err()
+	}
+	var trip model.Group
+	err = res.Decode(&trip)
+	if err != nil {
+		return err
+	}
+
+	if len(trip.Users) == 0 {
+		return c.JSON([]model.User{})
+	}
+	resUsers, err := api.usersColl.Find(c.Context(), bson.M{
+		"_id": bson.M{"$in": trip.Users},
+	})
+	if err != nil {
+		return err
+	}
+	var users []model.User
+	err = resUsers.All(c.Context(), &users)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(users)
+}
+
 func (api *Api) PostGroup(c *fiber.Ctx) error {
 	var trip model.Group
 	err := c.BodyParser(&trip)

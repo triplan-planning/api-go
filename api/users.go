@@ -10,7 +10,13 @@ import (
 )
 
 func (api *Api) GetUsers(c *fiber.Ctx) error {
-	res, err := api.usersColl.Find(c.Context(), bson.M{})
+
+	filter := bson.M{}
+	if query := c.Query("name"); query != "" {
+		filter["name"] = primitive.Regex{Pattern: query, Options: "i"}
+	}
+
+	res, err := api.usersColl.Find(c.Context(), filter)
 	if err != nil {
 		return err
 	}
