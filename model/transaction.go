@@ -68,7 +68,7 @@ func (s *Transaction) ComputePrices() (err error) {
 	totalWeights := uint32(0)
 	for _, t := range s.PaidFor {
 		if t.ForcePrice > rest {
-			return errors.New("force prices are higher than the trasaction amount, please fix")
+			return errors.New("force prices are higher than the transaction amount, please fix")
 		}
 		rest -= t.ForcePrice
 		totalWeights += t.Weight
@@ -90,10 +90,19 @@ func (s *Transaction) ComputePrices() (err error) {
 			rest -= part
 		}
 	}
+
+	// if part of the amount could not be parted between members, increment each person computed price by the smallest unit
 	if rest > 0 {
 		for _, t := range s.PaidFor {
 			t.ComputedPrice += 1
-			rest -= 1
+		}
+
+		roundValue := uint32(len(s.PaidFor))
+		// prevent from substracting rest lower than zero
+		if rest > roundValue {
+			rest -= roundValue
+		} else {
+			rest = 0
 		}
 	}
 
