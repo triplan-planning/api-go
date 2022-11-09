@@ -96,18 +96,6 @@ func (s *Transaction) ComputePrices() (err error) {
 		for _, t := range s.PaidFor {
 			t.ComputedPrice += 1
 		}
-
-		roundValue := uint32(len(s.PaidFor))
-		// prevent from substracting rest lower than zero
-		if rest > roundValue {
-			rest -= roundValue
-		} else {
-			rest = 0
-		}
-	}
-
-	if rest > 0 {
-		return errors.New("computations are fucked up")
 	}
 
 	return nil
