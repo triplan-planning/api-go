@@ -17,8 +17,8 @@ import (
 )
 
 func getPort() string {
-	port := os.Getenv("PORT")
-	if port == "" {
+	port, ok := os.LookupEnv("PORT")
+	if port == "" || !ok {
 		port = ":3000"
 	} else {
 		port = ":" + port
