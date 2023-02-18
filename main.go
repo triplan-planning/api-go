@@ -83,6 +83,7 @@ func main() {
 	groups := app.Group("/groups")
 	groups.Get("", routes.GetGroups)
 	groups.Get("/:id/users", routes.GetUsersFromGroup)
+	groups.Get("/:id/balances", routes.GetGroupBalances)
 	groups.Get("/:id", routes.GetGroupInfo)
 	groups.Post("", routes.PostGroup)
 	groups.Delete("/:id", routes.DeleteGroup)
