@@ -46,30 +46,32 @@ func (api *Api) PostGroupTransaction(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	tripId, err := getId(c.Params("id"))
+	groupId, err := getId(c.Params("id"))
 	if err != nil {
 		return err
 	}
-	tripRes := api.groupsColl.FindOne(c.Context(), bson.M{"_id": tripId})
-	if tripRes.Err() != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid trip id")
+	groupRes := api.groupsColl.FindOne(c.Context(), bson.M{"_id": groupId})
+	if groupRes.Err() != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid group id")
 	}
 
-	transaction.Group = tripId
+	transaction.Group = groupId
 	if err := transaction.Validate(); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	users := transaction.Users()
 
-	cnt, err := api.usersColl.CountDocuments(c.Context(), bson.M{
-		"_id": bson.M{"$in": users},
-	})
+	filter := bson.M{
+		"_id":   groupId,
+		"users": bson.M{"$in": users},
+	}
+	cnt, err := api.groupsColl.CountDocuments(c.Context(), filter)
 	if err != nil {
 		return err
 	}
 	if cnt != int64(len(users)) {
-		return fmt.Errorf(` %w: field "users" must be a list of valid users: got %d valid users out of %d`, fiber.ErrBadRequest, cnt, len(users))
+		return fmt.Errorf(` %w: field "users" must be a list of valid group members: got %d valid users out of %d`, fiber.ErrBadRequest, cnt, len(users))
 	}
 
 	transaction.Id = primitive.NilObjectID
