@@ -94,6 +94,7 @@ func main() {
 	transactions := app.Group("/transactions")
 	transactions.Delete("/:id", routes.DeleteTransaction)
 	transactions.Put("/:id", routes.PutTransaction)
+	transactions.Get("/:id", routes.GetTransaction)
 
 	app.Listen("0.0.0.0" + getPort())
 }

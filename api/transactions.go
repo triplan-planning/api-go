@@ -34,6 +34,33 @@ func (api *Api) GetGroupTransactions(c *fiber.Ctx) error {
 	return c.JSON(transactions)
 }
 
+// @Summary      Returns a transaction
+// @Accept       json
+// @Param        id   path      string  true  "Transaction ID"
+// @Success      200  {object}  model.Transaction
+// @Router       /transactions/{id} [get]
+func (api *Api) GetTransaction(c *fiber.Ctx) error {
+	transactionId, err := getId(c.Params("id"))
+	if err != nil {
+		return err
+	}
+	var transaction model.Transaction
+
+	filter := bson.M{"_id": transactionId}
+	err = api.transactionsColl.FindOne(
+		c.Context(),
+		filter,
+	).Decode(
+		&transaction,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(transaction)
+}
+
 // @Summary      Creates a transaction
 // @Accept       json
 // @Param        id   path      string  true  "Group ID"
