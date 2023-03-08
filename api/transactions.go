@@ -77,28 +77,38 @@ func (api *Api) PostGroupTransaction(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+
+	// get group from DB
 	groupRes := api.groupsColl.FindOne(c.Context(), bson.M{"_id": groupId})
 	if groupRes.Err() != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid group id")
 	}
-
+	// force the group id on the transaction if the group exists
 	transaction.Group = groupId
+
 	if err := transaction.Validate(); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	users := transaction.Users()
-
-	filter := bson.M{
-		"_id":   groupId,
-		"users": bson.M{"$in": users},
-	}
-	cnt, err := api.groupsColl.CountDocuments(c.Context(), filter)
+	// validate that all users on the transaction are members of the group
+	var group model.Group
+	err = groupRes.Decode(&group)
 	if err != nil {
 		return err
 	}
-	if cnt != int64(len(users)) {
-		return fmt.Errorf(` %w: field "users" must be a list of valid group members: got %d valid users out of %d`, fiber.ErrBadRequest, cnt, len(users))
+
+	// use a map for easier/faster access
+	groupUsersMap := map[primitive.ObjectID]bool{}
+	for _, userId := range group.Users {
+		groupUsersMap[userId] = true
+	}
+	if _, ok := groupUsersMap[transaction.PaidBy]; !ok {
+		return fmt.Errorf(` %w: the payer must be a member of the group`, fiber.ErrBadRequest)
+	}
+	for _, userId := range transaction.Users() {
+		if _, ok := groupUsersMap[userId]; !ok {
+			return fmt.Errorf(` %w: field 'users' must be a list of valid group members`, fiber.ErrBadRequest)
+		}
 	}
 
 	transaction.Id = primitive.NilObjectID
